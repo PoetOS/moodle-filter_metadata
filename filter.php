@@ -23,10 +23,17 @@
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+defined('MOODLE_INTERNAL') || die();
+
 /**
  * Filter class
  */
 class filter_metadata extends \moodle_text_filter {
+
+    /**
+     * @var array $cache Cache of found metadata values.
+     */
+    protected $cache = [];
 
     /**
      * Apply the filter to the text
@@ -54,8 +61,53 @@ class filter_metadata extends \moodle_text_filter {
      * @param $match array An array of matched groups, where [1] is the URL matched.
      *
      */
-    private static function find_metadata_callback($match) {
-        $result = $match[1] . ' = ' . $match[2];
-        return $result;
+    private function find_metadata_callback($match) {
+        global $PAGE;
+
+        if (count($match) <= 1) {
+            return '';
+        }
+
+        // Store the contextlevel, fieldname and instanceid for processing later.
+        list($contextname, $contextinstance) = array_merge(explode('=', $match[1]), [false]);
+        if ($contextinstance === false) {
+            // Need to determine what the context instance is.
+            if ($contextname == 'course') {
+                $contextinstance = $PAGE->course->id;
+            }
+        }
+
+        if (!isset($this->cache[$contextname][$match[2]][$contextinstance]) ||
+            empty($this->cache[$contextname][$match[2]][$contextinstance])) {
+            $this->cache[$contextname][$match[2]][$contextinstance] = $this->get_data($contextname, $match[2], $contextinstance);
+        }
+
+        return $this->cache[$contextname][$match[2]][$contextinstance];
+    }
+
+    /**
+     * Return the data value for the specific metadata instance.
+     *
+     * @param string $contextname The name of the context.
+     * @param string $fieldname The shortname of the metedata field type.
+     * @param int $instanceid The value of the context instance the data is attached to.
+     * @return string The value of the metadata field instance.
+     */
+    private function get_data($contextname, $fieldname, $instanceid) {
+        global $DB;
+
+        $contextplugins = core_component::get_plugin_list('metadatacontext');
+        if (isset($contextplugins[$contextname])) {
+            $contextclass = "\\metadatacontext_{$contextname}\\context_handler";
+            $contexthandler = new $contextclass($instanceid);
+            $params = [$instanceid, $contexthandler->contextlevel, $fieldname];
+            $sql = 'SELECT m.data FROM {local_metadata_field} mf ' .
+                'INNER JOIN {local_metadata} m ON mf.id = m.fieldid AND m.instanceid = ? ' .
+                'WHERE mf.contextlevel = ? AND mf.shortname = ? ';
+            $data = $DB->get_field_sql($sql, $params);
+        } else {
+            $data = '';
+        }
+        return $data;
     }
 }
