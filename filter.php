@@ -43,10 +43,9 @@ class filter_metadata extends \moodle_text_filter {
      * @return string Text after processing.
      */
     public function filter($text, array $options = []) {
-        $filtered = $text; // We need to return the original value if regex fails!
         // Patterns look like "{{metadata::course=234::credits}}", where '=234' is optional.
         $filtered = preg_replace_callback('/{{metadata::([a-zA-Z_]+(?:=[0-9])*)::([a-zA-Z0-9_]+)}}/U',
-            'self::find_metadata_callback', $filtered);
+            'self::find_metadata_callback', $text);
         if (empty($filtered)) {
             // If $filtered is emtpy return original $text.
             return $text;
@@ -62,8 +61,6 @@ class filter_metadata extends \moodle_text_filter {
      *
      */
     private function find_metadata_callback($match) {
-        global $PAGE;
-
         if (count($match) <= 1) {
             return '';
         }
@@ -72,11 +69,13 @@ class filter_metadata extends \moodle_text_filter {
         list($contextname, $contextinstance) = array_merge(explode('=', $match[1]), [false]);
         if ($contextinstance === false) {
             // Need to determine what the context instance is.
-            if ($contextname == 'course') {
-                $contextinstance = $PAGE->course->id;
+            if (!($contextinstance = \local_metadata\context\context_handler::find_instanceid($contextname))) {
+                return get_string('errornocontextvalue', 'filter_metadata');
             }
         }
 
+        // TODO - Need to use the fieldtype to get the data display.
+        // TODO - Need to check if user has access to the data field.
         if (!isset($this->cache[$contextname][$match[2]][$contextinstance]) ||
             empty($this->cache[$contextname][$match[2]][$contextinstance])) {
             $this->cache[$contextname][$match[2]][$contextinstance] = $this->get_data($contextname, $match[2], $contextinstance);
