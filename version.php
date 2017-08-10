@@ -31,5 +31,5 @@ $plugin->component = 'filter_metadata';
 $plugin->release  = 'BETA3.1.0 (Build - 2017080900)';
 $plugin->maturity  = MATURITY_BETA;
 $plugin->dependencies = [
-    'local_metadata' => 2017070101,
+    'local_metadata' => 2017070102,
 ];

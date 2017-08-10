@@ -26,3 +26,5 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['filtername'] = 'Meatadata content';
+
+$string['errornocontextvalue'] = 'No value found';

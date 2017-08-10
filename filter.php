@@ -96,17 +96,17 @@ class filter_metadata extends \moodle_text_filter {
     private function get_data($contextname, $fieldname, $instanceid) {
         global $DB;
 
-        $contextplugins = core_component::get_plugin_list('metadatacontext');
-        if (isset($contextplugins[$contextname])) {
-            $contextclass = "\\metadatacontext_{$contextname}\\context_handler";
-            $contexthandler = new $contextclass($instanceid);
+        try {
+            $contexthandler = \local_metadata\context\context_handler::factory($contextname, $instanceid);
             $params = [$instanceid, $contexthandler->contextlevel, $fieldname];
             $sql = 'SELECT m.data FROM {local_metadata_field} mf ' .
                 'INNER JOIN {local_metadata} m ON mf.id = m.fieldid AND m.instanceid = ? ' .
                 'WHERE mf.contextlevel = ? AND mf.shortname = ? ';
             $data = $DB->get_field_sql($sql, $params);
-        } else {
-            $data = '';
+            $data = empty($data) ? get_string('errornocontextvalue', 'filter_metadata') : $data;
+        } catch (\moodle_exception $e) {
+            debugging('Exception detected when using metadata filter: ' . $e->getMessage(), DEBUG_NORMAL, $e->getTrace());
+            $data = get_string('errornocontextvalue', 'filter_metadata');
         }
         return $data;
     }

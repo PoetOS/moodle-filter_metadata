@@ -1,0 +1,6 @@
+To-do's:
+
+- Need an object factory to return the correct subplugin object from various arguments. - DONE
+- Need a function that returns a list of the context subplugin names to be used in various places.
+- Need a function to determine the Moodle context the filter is running in, and return its instance value.
+- Need an is_enabled function for each context subplugin. - DONE
